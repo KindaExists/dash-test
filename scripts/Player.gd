@@ -1,7 +1,7 @@
 extends KinematicBody2D
 
 # Misc Constants
-export var epsilon = 0.002
+const EPSILON: float = 0.002
 
 # Gravity
 const GRAVITY_ACC: int = 2000
@@ -46,7 +46,28 @@ var input_vector: Vector2 = Vector2.ZERO
 var captured_dash_vector: Vector2 = Vector2.ZERO
 
 # Misc
+const GHOST_MIN_SPEED: int = 1200
 onready var player_sprite: Sprite = $Sprite
+var ghost_scene = preload("res://DashGhost.tscn")
+
+
+func _process(_delta: float):
+	if is_dash_ready:
+		player_sprite.modulate = Color(1, 1, 1)
+	else:
+		# Changes color slightly if dash is not ready
+		player_sprite.modulate = Color(0.9, 0.5, 0.5)
+
+	if is_dashing or velocity_vector.length() > GHOST_MIN_SPEED:
+		instance_ghost()
+
+
+func instance_ghost():
+	var ghost: Sprite = ghost_scene.instance()
+	get_parent().add_child(ghost)
+
+	ghost.global_position = global_position
+
 
 
 func _physics_process(delta: float):
@@ -67,11 +88,11 @@ func _physics_process(delta: float):
 		if abs(velocity_vector.x) > GROUND_BASE_MAX_SPEED:
 			velocity_vector.x = move_toward(velocity_vector.x, GROUND_BASE_MAX_SPEED * sign(velocity_vector.x), GROUND_OVER_DECEL * delta)
 
-		elif abs(velocity_vector.x) > epsilon and sign(velocity_vector.x) == -sign(input_vector.x):
+		elif abs(velocity_vector.x) > EPSILON and sign(velocity_vector.x) == -sign(input_vector.x):
 			# Player is turning while under base max speed
 			velocity_vector.x = move_toward(velocity_vector.x, 0, GROUND_BASE_TURN_ACC * delta)
 
-		elif abs(velocity_vector.x) > epsilon and abs(input_vector.x) < epsilon:
+		elif abs(velocity_vector.x) > EPSILON and abs(input_vector.x) < EPSILON:
 			# Player is stopping while under base max speed
 			velocity_vector.x = move_toward(velocity_vector.x, 0, GROUND_BASE_STOP_ACC * delta)
 
@@ -84,20 +105,21 @@ func _physics_process(delta: float):
 
 	else:
 		# Player is in the air
-		if abs(velocity_vector.x) > epsilon and sign(velocity_vector.x) == -sign(input_vector.x):
+		if abs(velocity_vector.x) > EPSILON and sign(velocity_vector.x) == -sign(input_vector.x):
 			# Player is turning while under base max speed
 			velocity_vector.x = move_toward(velocity_vector.x, 0, AIR_BASE_TURN_ACC * delta)
 
-		elif abs(velocity_vector.x) > epsilon and abs(input_vector.x) < epsilon:
+		elif abs(velocity_vector.x) > EPSILON and abs(input_vector.x) < EPSILON:
 			# Player is stopping while under base max speed
 			velocity_vector.x = move_toward(velocity_vector.x, 0, AIR_BASE_STOP_ACC * delta)
 
 		else:
-			velocity_vector.x = move_toward(
-				velocity_vector.x,
-				AIR_BASE_MAX_SPEED * sign(input_vector.x),
-				AIR_ACC * input_vector.x * sign(input_vector.x) * delta
-			)
+			if abs(velocity_vector.x) < AIR_BASE_MAX_SPEED:
+				velocity_vector.x = move_toward(
+					velocity_vector.x,
+					AIR_BASE_MAX_SPEED * sign(input_vector.x),
+					AIR_ACC * input_vector.x * sign(input_vector.x) * delta
+				)
 
 
 	# y-axis movement
@@ -128,12 +150,6 @@ func _physics_process(delta: float):
 
 
 	# Dash movement
-	if is_dash_ready:
-		player_sprite.modulate = Color(1, 1, 1)
-	else:
-		# Changes color slightly if dash is not ready
-		player_sprite.modulate = Color(0.9, 0.5, 0.5)
-
 	if (
 		Input.is_action_just_pressed("dash")
 		and is_dash_ready
@@ -170,7 +186,6 @@ func get_input_direction() -> Vector2:
 		int(Input.is_action_pressed("right")) - int(Input.is_action_pressed("left")),
 		int(Input.is_action_pressed("down")) - int(Input.is_action_pressed("up"))
 	)
-
 
 # Not the same as input direction, gets analog input vector
 func get_input_vector() -> Vector2:

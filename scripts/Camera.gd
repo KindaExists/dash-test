@@ -6,7 +6,7 @@ const BASE_X_BOUNDS: int = 400
 onready var camera: Camera2D = $Camera2D
 onready var player: KinematicBody2D = $Player
 
-func _physics_process(delta: float):
+func _physics_process(_delta: float):
 	var player_x_pos: float = player.position.x
 
 	if abs(player_x_pos) > BASE_X_BOUNDS:
