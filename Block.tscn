@@ -11,4 +11,6 @@ extents = Vector2( 8, 8 )
 shape = SubResource( 1 )
 
 [node name="Sprite" type="Sprite" parent="."]
+position = Vector2( -8, -8 )
 texture = ExtResource( 1 )
+centered = false

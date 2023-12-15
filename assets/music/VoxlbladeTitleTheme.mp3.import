@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/VoxlbladeTitleTheme.mp3-9199898988a76d0e34d5dde46dde7bf0.mp3str"
+
+[deps]
+
+source_file="res://assets/music/VoxlbladeTitleTheme.mp3"
+dest_files=[ "res://.import/VoxlbladeTitleTheme.mp3-9199898988a76d0e34d5dde46dde7bf0.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

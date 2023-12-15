@@ -37,8 +37,14 @@ var time_in_dash: float = 0.0
 var is_dash_ready: bool = false
 var is_dashing: bool = false
 
+# Walljump values
+const WALL_HORIZONTAL_REPEL_SPEED: int = 400
+const WALL_FRICTION: float = 0.7
+var is_sliding_on_wall: bool = false
+var was_sliding_on_wall: bool = false
+
 # Vectors
-var velocity_vector: Vector2 = Vector2.ZERO
+export var velocity_vector: Vector2 = Vector2.ZERO
 var dash_vector: Vector2 = Vector2.ZERO
 var input_direction: Vector2 = Vector2.ZERO
 var last_nonzero_x_input_direction: float = 1
@@ -68,13 +74,19 @@ func instance_ghost():
 
 	ghost.global_position = global_position
 
-
+var is_hitting_ceilling: bool = false
+var did_hit_ceilling: bool = false
 
 func _physics_process(delta: float):
 	is_grounded = test_move(transform, Vector2.DOWN)
+	is_hitting_ceilling = test_move(transform, Vector2.UP)
+	var is_wall_on_left: bool = test_move(transform, Vector2.LEFT)
+	var is_wall_on_right: bool = test_move(transform, Vector2.RIGHT)
 
 	input_direction = get_input_direction()
 	input_vector = get_input_vector()
+
+	is_sliding_on_wall = (is_wall_on_left and (input_direction.x < 0)) or (is_wall_on_right and (input_direction.x > 0))
 
 	if input_direction.x != 0:
 		last_nonzero_x_input_direction = input_direction.x
@@ -124,8 +136,10 @@ func _physics_process(delta: float):
 
 	# y-axis movement
 	if is_grounded:
+		did_hit_ceilling = false
 		velocity_vector.y = 0
 		if Input.is_action_just_pressed("jump"):
+			$PlayerSounds/Jump.play()
 			velocity_vector.y -= JUMP_INITIAL_SPEED
 			is_jumping = true
 			is_grounded = false
@@ -138,6 +152,7 @@ func _physics_process(delta: float):
 		if (
 			is_jumping
 			and Input.is_action_pressed("jump")
+			and not is_hitting_ceilling
 			and time_in_air < JUMP_TIME_TO_PEAK
 		):
 			velocity_vector.y -= JUMP_RISING_SPEED * delta
@@ -148,6 +163,17 @@ func _physics_process(delta: float):
 			if not is_dashing:
 				velocity_vector.y += GRAVITY_ACC * delta
 
+		if is_hitting_ceilling and not did_hit_ceilling:
+			did_hit_ceilling = true
+			velocity_vector.y = 0
+
+		if velocity_vector.y > 0 and is_sliding_on_wall and not was_sliding_on_wall:
+			velocity_vector.y = 0
+
+		if velocity_vector.y > 0 and is_sliding_on_wall:
+			did_hit_ceilling = false
+			velocity_vector.y -= GRAVITY_ACC * delta * WALL_FRICTION
+
 
 	# Dash movement
 	if (
@@ -155,6 +181,7 @@ func _physics_process(delta: float):
 		and is_dash_ready
 		and not is_dashing
 	):
+		$PlayerSounds/Dash.play()
 		is_dashing = true
 		is_dash_ready = false
 		time_in_dash = 0
@@ -176,7 +203,24 @@ func _physics_process(delta: float):
 		time_in_dash = 0
 		captured_dash_vector = Vector2.ZERO
 
+
+	# Walljump
+	was_sliding_on_wall = is_sliding_on_wall
+
+	if is_sliding_on_wall and Input.is_action_just_pressed("jump") and not test_move(transform, Vector2.DOWN):
+		$PlayerSounds/Jump.play()
+		velocity_vector.x = (int(is_wall_on_left) - int(is_wall_on_right)) * WALL_HORIZONTAL_REPEL_SPEED
+		velocity_vector.y = -JUMP_INITIAL_SPEED
+		is_jumping = true
+		is_grounded = false
+
+		# prematurely ends dash if active
+		is_dashing = false
+		time_in_dash = 0
+
+
 	move_and_slide_with_snap(velocity_vector, Vector2.DOWN, Vector2.UP)
+
 
 
 
